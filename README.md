@@ -6,3 +6,4 @@ CHALLENGE 1: THIẾT KẾ DATABASE
 - Dữ liệu mẫu (sample_data.sql): ~10 bản ghi/bảng
 - Chuẩn hóa 3NF, toàn vẹn dữ liệu
 - Tạo dự án Back-End, kết nối Database, cấu hình tự động sinh Entities/Models từ Database cho dự án. (.NET: scaffold, Node: sequelize-auto)
+

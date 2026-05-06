@@ -1,0 +1,59 @@
+dotnet add package BCrypt.Net-Next
+dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer
+
+phần AuthController.cs
+
+// Hàm phụ trợ: Tạo JWT Token
+        private string GenerateJwtToken(UserAuth auth)
+        {
+            var jwtSettings = _configuration.GetSection("Jwt");
+            var keyStr = jwtSettings["Key"];
+            
+            if (string.IsNullOrEmpty(keyStr))
+                throw new Exception("JWT Secret Key chưa được cấu hình!");
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyStr));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            // Các thông tin đính kèm trong Token (Claims)
+            var claims = new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, auth.UserId.ToString()),
+                new Claim(ClaimTypes.Name, auth.Username),
+                new Claim(JwtRegisteredClaimNames.Email, auth.User.Email ?? ""),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            var token = new JwtSecurityToken(
+                issuer: jwtSettings["Issuer"],
+                audience: jwtSettings["Audience"],
+                claims: claims,
+                expires: DateTime.Now.AddHours(2), // Token có giá trị trong 2 giờ
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+-------------------------------------------------------------
+
+Program.cs 
+thêm 
+// 2. Cấu hình xác thực JWT
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrEmpty(jwtKey)) throw new Exception("JWT Key is missing!");
+
+var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options => {
+        options.TokenValidationParameters = new TokenValidationParameters {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ClockSkew = TimeSpan.Zero
+        };
+    });
